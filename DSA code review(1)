@@ -1,0 +1,133 @@
+class MinHeap:
+    def __init__(self):
+        self.data = []
+
+    def __len__(self):
+        return len(self.data)
+
+    def push(self, item):
+        self.data.append(item)
+        self._sift_up(len(self.data) - 1)
+
+    def pop(self):
+        if not self.data:
+            return None
+        top = self.data[0]
+        last = self.data.pop()
+        if self.data:
+            self.data[0] = last
+            self._sift_down(0)
+        return top
+
+    def _sift_up(self, idx):
+        while idx > 0:
+            parent = (idx - 1) // 2
+            if self.data[idx] < self.data[parent]:
+                self.data[idx], self.data[parent] = self.data[parent], self.data[idx]
+                idx = parent
+            else:
+                break
+
+    def _sift_down(self, idx):
+        n = len(self.data)
+        while True:
+            left = 2 * idx + 1
+            right = 2 * idx + 2
+            smallest = idx
+            if left < n and self.data[left] < self.data[smallest]:
+                smallest = left
+            if right < n and self.data[right] < self.data[smallest]:
+                smallest = right
+            if smallest == idx:
+                break
+            self.data[idx], self.data[smallest] = self.data[smallest], self.data[idx]
+            idx = smallest
+
+
+def manhattan(a, b):
+    return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+
+def a_star(grid, start, goal):
+    rows, cols = len(grid), len(grid[0])
+    g_costs, parent = {}, {}
+    open_heap, counter = MinHeap(), 0
+    g_costs[start] = 0
+    open_heap.push((manhattan(start, goal), counter, start))
+    counter += 1
+    visited = set()
+    directions = [(-1,0),(1,0),(0,-1),(0,1)]
+
+    while len(open_heap) > 0:
+        f, _, current = open_heap.pop()
+        if current in visited: 
+            continue
+        visited.add(current)
+
+        if current == goal:
+            path = []
+            node = goal
+            while node != start:
+                path.append(node)
+                node = parent[node]
+            path.append(start)
+            path.reverse()
+            return path, g_costs[goal]
+
+        cr, cc = current
+        for dr, dc in directions:
+            nr, nc = cr+dr, cc+dc
+            if not (0 <= nr < rows and 0 <= nc < cols): 
+                continue
+            if grid[nr][nc] == '1': 
+                continue
+            neighbor, tentative_g = (nr, nc), g_costs[current] + 1
+            if tentative_g < g_costs.get(neighbor, 10**9):
+                g_costs[neighbor] = tentative_g
+                parent[neighbor] = current
+                if neighbor not in visited:
+                    open_heap.push((tentative_g + manhattan(neighbor, goal), counter, neighbor))
+                    counter += 1
+    return None, None
+
+
+def read_grid_from_file(filename):
+    with open(filename, "r") as f:
+        lines = [line.strip() for line in f if line.strip()]
+    R, C = map(int, lines[0].split())
+    grid = [line.split() if " " in line else list(line) for line in lines[1:1+R]]
+    return grid, R, C
+
+
+def find_char(grid, ch):
+    for r in range(len(grid)):
+        for c in range(len(grid[0])):
+            if grid[r][c] == ch:
+                return (r, c)
+    return None
+
+
+def print_path_on_grid(grid, path):
+    g = [row[:] for row in grid]
+    for r, c in path:
+        if g[r][c] not in ('C','T'):
+            g[r][c] = '*'
+    for row in g:
+        print(" ".join(row))
+
+
+
+if __name__ == "__main__":
+    grid, R, C = read_grid_from_file(r"C:\Users\narni\OneDrive\Desktop\sem-3 projects\DSA - 2\input4.txt")
+    start, goal = find_char(grid, 'C'), find_char(grid, 'T')
+    if not start or not goal:
+        print("Start (C) or Goal (T) not found in grid.")
+    else:
+        path, cost = a_star(grid, start, goal)
+        if path:
+            print("Path found with cost:", cost)
+            print("Path:", path)
+            print("\nGrid with path (* marks the route):")
+            print_path_on_grid(grid, path)
+        else:
+            print("No path found.")
